@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Git Flashcards</title>
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Google Fonts - Inter -->
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            /* Custom CSS for card flip animation */
+            .font-inter {
+                font-family: "Inter", sans-serif;
+            }
+            .perspective {
+                perspective: 1000px;
+            }
+            .flashcard-inner {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                text-align: center;
+                transition: transform 0.7s;
+                transform-style: preserve-3d;
+            }
+            .flashcard-inner.flashcard-flipped {
+                transform: rotateY(180deg);
+            }
+            .flashcard-front,
+            .flashcard-back {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                -webkit-backface-visibility: hidden; /* Safari */
+                backface-visibility: hidden;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem; /* p-6 */
+                border-radius: 1rem; /* rounded-2xl */
+            }
+            .flashcard-front {
+                background-color: #fff;
+                border: 4px solid #a78bfa; /* border-purple-300 */
+            }
+            .flashcard-back {
+                background-color: #ede9fe; /* bg-purple-50 */
+                border: 4px solid #8b5cf6; /* border-purple-400 */
+                transform: rotateY(180deg);
+            }
+            /* Ensure responsive SVG sizing */
+            .flashcard-front svg {
+                width: 64px; /* default size */
+                height: 64px; /* default size */
+                stroke: currentColor; /* allows tailwind text-color to apply */
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            /* Specific sizing for combined icons and illustrations */
+            .flex-icon-container svg,
+            .illustration-svg {
+                width: 100%; /* Make illustrations responsive */
+                max-width: 120px; /* Max width for illustrations */
+                height: auto;
+                stroke: currentColor;
+                stroke-width: 2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .flex-icon-container .arrow-icon {
+                width: 32px;
+                height: 32px;
+            }
+            /* Adjust for specific illustration sizes if needed */
+            .illustration-large {
+                max-width: 180px; /* Larger illustrations */
+            }
+        </style>
+    </head>
+    <body
+        class="min-h-screen bg-gradient-to-br from-purple-100 to-indigo-200 flex flex-col items-center justify-center p-4 font-inter"
+    >
+        <h1
+            class="text-4xl md:text-5xl font-extrabold text-purple-800 mb-8 text-center drop-shadow-lg"
+        >
+            Git Flashcards
+        </h1>
+
+        <div id="flashcard-wrapper" class="w-full flex justify-center mb-8">
+            <div
+                id="flashcard"
+                class="relative w-full max-w-md h-96 md:h-80 lg:h-96 shadow-xl perspective cursor-pointer"
+            >
+                <div class="flashcard-inner">
+                    <div class="flashcard-front">
+                        <div id="front-icon" class="mb-4"></div>
+                        <h2
+                            id="front-text"
+                            class="text-2xl md:text-xl lg:text-2xl font-bold text-gray-800 leading-tight"
+                        ></h2>
+                        <p
+                            id="category-text"
+                            class="text-sm text-gray-500 mt-2"
+                        ></p>
+                    </div>
+                    <div class="flashcard-back">
+                        <p
+                            id="back-text"
+                            class="text-gray-700 text-lg md:text-base lg:text-lg leading-relaxed whitespace-pre-line"
+                        ></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex space-x-4 mt-4 w-full max-w-md justify-center">
+            <button
+                id="prev-btn"
+                class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300"
+            >
+                Previous
+            </button>
+            <button
+                id="next-btn"
+                class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-full shadow-lg hover:bg-purple-700 transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-300"
+            >
+                Next
+            </button>
+        </div>
+
+        <p id="card-counter" class="mt-6 text-gray-600 text-sm">Card 1 of X</p>
+
+        <script>
+            // Helper to create SVG icon HTML
+            function createSvgIcon(svgContent, size, className) {
+                return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">${svgContent}</svg>`;
+            }
+
+            // SVG path data for Lucide icons
+            const icons = {
+                GitBranch: `<path d="M6 3v12"/><path d="M18 6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M18 8v10a2 2 0 0 1-2 2H6"/>`,
+                Folder: `<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 4 2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2z"/>`,
+                Cloud: `<path d="M17.5 18H19a2 2 0 0 0 2-2V8.5a2 2 0 0 0-2-2h-1.5A2.5 2.5 0 0 0 14 4c-1.5 0-2.5 1-3.5 1.5A2.5 2.5 0 0 0 7 4a2.5 2.5 0 0 0-2.5 2.5V16a2 2 0 0 0 2 2h2.5"/>`,
+                HardDrive: `<path d="M22 12H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01"/><path d="M10 16h.01"/>`,
+                GitCommit: `<circle cx="12" cy="12" r="3"/><line x1="3" x2="9" y1="12" y2="12"/><line x1="15" x2="21" y1="12" y2="12"/>`,
+                Plus: `<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>`,
+                ArrowDownToLine: `<path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/>`,
+                ArrowUpFromLine: `<path d="M12 17V3"/><path d="m6 11 6-6 6 6"/><path d="M19 21H5"/>`,
+                ListChecks: `<path d="m3 15 2 2 4-4"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1 2-2V6a2 2 0 0 1 2-2h2"/><path d="m17 10 2 2 4-4"/>`,
+                ArrowRightLeft: `<path d="M8 3L4 7L8 11"/><path d="M12 7H4"/><path d="M16 21l4-4l-4-4"/><path d="M12 17h8"/>`,
+                Network: `<rect x="16" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><path d="M12 17v-3.5a2.5 2.0 0 0 1 5 0V17"/><path d="M12 13V9.5a2.5 2.0 0 0 0-5 0V13"/><path d="M12 8V6"/><path d="M12 18v4"/>`,
+                GitFork: `<path d="M12 18v-3a4 4 0 0 1 4-4h2a2 2 0 0 1 2 2v3"/><path d="M12 18v-3a4 4 0 0 0-4-4H6a2 2 0 0 0-2 2v3"/><circle cx="12" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><circle cx="6" cy="18" r="3"/>`,
+                Lightbulb: `<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 18v4"/>`,
+                Info: `<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>`,
+                CheckCircle: `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>`,
+                XCircle: `<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>`,
+                GitMerge: `<path d="m5 8 3-3 3 3"/><path d="M8 19v-8.5a2.5 2.5 0 0 1 5 0V19"/><path d="M12 12H2"/>`,
+                GitCompare: `<circle cx="12" cy="12" r="3"/><path d="M18 12h3"/><path d="M3 12h3"/><path d="M15 6l-3-3-3 3"/><path d="M9 18l3 3 3-3"/>`,
+                Undo2: `<path d="M9.5 14.5c-4.4 0-8.5-2.8-10-7"/><path d="M17 10H3"/><path d="m6 7 3-3 3 3"/>`,
+                RefreshCw: `<path d="M21 12a9 9 0 0 0-9-9c-2.5 0-4.9 1-6.7 2.8A9 9 0 0 0 3 12"/><path d="M3 6V3h3"/><path d="M21 18v3h-3"/><path d="M21 12a9 9 0 0 1-9 9c-2.5 0-4.9-1-6.7-2.8A9 9 0 0 1 3 12"/>`,
+                Archive: `<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>`,
+                Target: `<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>`,
+                ArrowLeft: `<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>`,
+                Code: `<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>`,
+            };
+
+            // Custom SVG illustrations
+            const illustrations = {
+                // Git Workflow / States
+                workflowStates: `
+                <svg class="illustration-svg text-blue-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="5" y="5" width="40" height="30" rx="5" fill="#BFDBFE" stroke="#2563EB" stroke-width="2"/>
+                    <text x="25" y="25" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Working</text>
+                    <text x="25" y="35" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Dir</text>
+
+                    <rect x="55" y="5" width="40" height="30" rx="5" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/>
+                    <text x="75" y="25" font-family="Inter" font-size="10" fill="#9A3412" text-anchor="middle">Staging</text>
+                    <text x="75" y="35" font-family="Inter" font-size="10" fill="#9A3412" text-anchor="middle">Area</text>
+
+                    <rect x="105" y="5" width="40" height="30" rx="5" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+                    <text x="125" y="25" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">Repository</text>
+
+                    <path d="M45 20 H55" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <path d="M95 20 H105" stroke="#6B7280" stroke-width="2" marker-end="url(#arrowhead)"/>
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#6B7280" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Branching
+                branching: `
+                <svg class="illustration-svg text-teal-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="20" x2="130" y2="20" stroke="#34D399" stroke-width="4" />
+                    <circle cx="20" cy="20" r="5" fill="#34D399" />
+                    <circle cx="75" cy="20" r="5" fill="#34D399" />
+                    <text x="75" y="10" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">main</text>
+
+                    <line x1="75" y1="20" x2="75" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <line x1="75" y1="80" x2="130" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <circle cx="75" cy="80" r="5" fill="#818CF8" />
+                    <text x="75" y="90" font-family="Inter" font-size="10" fill="#4338CA" text-anchor="middle">feature</text>
+                </svg>
+            `,
+                // Merging
+                merging: `
+                <svg class="illustration-svg text-indigo-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="20" x2="130" y2="20" stroke="#34D399" stroke-width="4" />
+                    <circle cx="20" cy="20" r="5" fill="#34D399" />
+                    <circle cx="75" cy="20" r="5" fill="#34D399" />
+                    <text x="75" y="10" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">main</text>
+
+                    <line x1="75" y1="20" x2="75" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <line x1="75" y1="80" x2="110" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <circle cx="110" cy="80" r="5" fill="#818CF8" />
+                    <text x="110" y="90" font-family="Inter" font-size="10" fill="#4338CA" text-anchor="middle">feature</text>
+
+                    <path d="M110 80 Q 120 50, 130 20" stroke="#818CF8" stroke-width="4" fill="none"/>
+                    <circle cx="130" cy="20" r="5" fill="#34D399" />
+                </svg>
+            `,
+                // Merge Conflict
+                mergeConflict: `
+                <svg class="illustration-svg text-red-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="20" x2="130" y2="20" stroke="#34D399" stroke-width="4" />
+                    <circle cx="20" cy="20" r="5" fill="#34D399" />
+                    <circle cx="75" cy="20" r="5" fill="#34D399" />
+                    <text x="75" y="10" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">main</text>
+
+                    <line x1="75" y1="20" x2="75" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <line x1="75" y1="80" x2="110" y2="80" stroke="#818CF8" stroke-width="4" />
+                    <circle cx="110" cy="80" r="5" fill="#818CF8" />
+                    <text x="110" y="90" font-family="Inter" font-size="10" fill="#4338CA" text-anchor="middle">feature</text>
+
+                    <path d="M110 80 Q 120 50, 130 20" stroke="#818CF8" stroke-width="4" fill="none" stroke-dasharray="5 5"/>
+                    <line x1="120" y1="40" x2="130" y2="60" stroke="#EF4444" stroke-width="4"/>
+                    <line x1="130" y1="40" x2="120" y2="60" stroke="#EF4444" stroke-width="4"/>
+                    <circle cx="130" cy="20" r="5" fill="#34D399" />
+                </svg>
+            `,
+                // Git Fetch
+                gitFetch: `
+                <svg class="illustration-svg text-blue-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="30" width="50" height="40" rx="5" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+                    <text x="35" y="55" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">Local Repo</text>
+
+                    <rect x="90" y="30" width="50" height="40" rx="5" fill="#BFDBFE" stroke="#2563EB" stroke-width="2"/>
+                    <text x="115" y="55" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Remote Repo</text>
+
+                    <path d="M85 50 L65 50" stroke="#2563EB" stroke-width="3" marker-end="url(#arrowhead-blue)"/>
+                    <text x="75" y="45" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">FETCH</text>
+                    <defs>
+                        <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#2563EB" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Git Pull
+                gitPull: `
+                <svg class="illustration-svg text-green-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="30" width="50" height="40" rx="5" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+                    <text x="35" y="55" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">Local Repo</text>
+
+                    <rect x="90" y="30" width="50" height="40" rx="5" fill="#BFDBFE" stroke="#2563EB" stroke-width="2"/>
+                    <text x="115" y="55" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Remote Repo</text>
+
+                    <path d="M85 50 L65 50" stroke="#10B981" stroke-width="3" marker-end="url(#arrowhead-green)"/>
+                    <text x="75" y="45" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">PULL</text>
+                    <defs>
+                        <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#10B981" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Git Push
+                gitPush: `
+                <svg class="illustration-svg text-red-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="30" width="50" height="40" rx="5" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+                    <text x="35" y="55" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">Local Repo</text>
+
+                    <rect x="90" y="30" width="50" height="40" rx="5" fill="#BFDBFE" stroke="#2563EB" stroke-width="2"/>
+                    <text x="115" y="55" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Remote Repo</text>
+
+                    <path d="M65 50 L85 50" stroke="#EF4444" stroke-width="3" marker-end="url(#arrowhead-red)"/>
+                    <text x="75" y="45" font-family="Inter" font-size="10" fill="#B91C1C" text-anchor="middle">PUSH</text>
+                    <defs>
+                        <marker id="arrowhead-red" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#EF4444" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Detached HEAD
+                detachedHead: `
+                <svg class="illustration-svg text-red-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="20" y1="20" x2="130" y2="20" stroke="#34D399" stroke-width="4" />
+                    <circle cx="20" cy="20" r="5" fill="#34D399" />
+                    <circle cx="75" cy="20" r="5" fill="#34D399" />
+                    <circle cx="130" cy="20" r="5" fill="#34D399" />
+                    <text x="75" y="10" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">main branch</text>
+
+                    <circle cx="100" cy="50" r="7" fill="#EF4444" stroke="#B91C1C" stroke-width="2"/>
+                    <text x="100" y="55" font-family="Inter" font-size="12" fill="#FFFFFF" text-anchor="middle">HEAD</text>
+
+                    <path d="M100 57 L100 25" stroke="#EF4444" stroke-width="2" marker-end="url(#arrowhead-red-small)"/>
+                    <defs>
+                        <marker id="arrowhead-red-small" markerWidth="8" markerHeight="5" refX="0" refY="2.5" orient="auto">
+                            <polygon points="0 0, 8 2.5, 0 5" fill="#EF4444" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Git Rebase
+                gitRebase: `
+                <svg class="illustration-svg text-orange-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Original main branch -->
+                    <line x1="20" y1="20" x2="130" y2="20" stroke="#34D399" stroke-width="4" />
+                    <circle cx="20" cy="20" r="5" fill="#34D399" />
+                    <circle cx="75" cy="20" r="5" fill="#34D399" />
+                    <text x="75" y="10" font-family="Inter" font-size="10" fill="#065F46" text-anchor="middle">main</text>
+
+                    <!-- Feature branch (original position) -->
+                    <line x1="75" y1="20" x2="75" y2="50" stroke="#818CF8" stroke-width="4" />
+                    <line x1="75" y1="50" x2="100" y2="50" stroke="#818CF8" stroke-width="4" />
+                    <circle cx="100" cy="50" r="5" fill="#818CF8" />
+                    <text x="100" y="60" font-family="Inter" font-size="10" fill="#4338CA" text-anchor="middle">feature</text>
+
+                    <!-- Rebased feature branch -->
+                    <line x1="130" y1="20" x2="130" y2="80" stroke="#F97316" stroke-width="4" stroke-dasharray="4 2"/>
+                    <line x1="130" y1="80" x2="100" y2="80" stroke="#F97316" stroke-width="4" />
+                    <circle cx="100" cy="80" r="5" fill="#F97316" />
+                    <text x="100" y="90" font-family="Inter" font-size="10" fill="#9A3412" text-anchor="middle">rebased feature</text>
+
+                    <path d="M100 50 Q 115 65, 130 80" stroke="#F97316" stroke-width="2" fill="none" marker-end="url(#arrowhead-orange)"/>
+                    <defs>
+                        <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#F97316" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+                // Git Stash
+                gitStash: `
+                <svg class="illustration-svg text-brown-600" viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Working Directory -->
+                    <rect x="10" y="30" width="50" height="40" rx="5" fill="#BFDBFE" stroke="#2563EB" stroke-width="2"/>
+                    <text x="35" y="55" font-family="Inter" font-size="10" fill="#1E40AF" text-anchor="middle">Working Dir</text>
+
+                    <!-- Stash Box -->
+                    <rect x="90" y="30" width="50" height="40" rx="5" fill="#FDE68A" stroke="#D97706" stroke-width="2"/>
+                    <text x="115" y="55" font-family="Inter" font-size="10" fill="#9A3412" text-anchor="middle">Stash</text>
+                    <path d="M95 35 L135 35" stroke="#D97706" stroke-width="1"/>
+
+                    <!-- Arrow to stash -->
+                    <path d="M65 50 L85 50" stroke="#92400E" stroke-width="3" marker-end="url(#arrowhead-brown)"/>
+                    <text x="75" y="45" font-family="Inter" font-size="10" fill="#78350F" text-anchor="middle">STASH</text>
+                    <defs>
+                        <marker id="arrowhead-brown" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#92400E" />
+                        </marker>
+                    </defs>
+                </svg>
+            `,
+            };
+
+            const flashcardsData = [
+                // Basic Concepts
+                {
+                    category: "Basic Concepts",
+                    frontIcon: createSvgIcon(
+                        icons.GitBranch,
+                        64,
+                        "text-purple-600",
+                    ),
+                    frontText: "What is Git?",
+                    backText:
+                        "A **version control system** (VCS) that tracks changes to files, allowing multiple people to work on a project simultaneously without overwriting each other's work.",
+                },
+                {
+                    category: "Basic Concepts",
+                    frontIcon: createSvgIcon(
+                        icons.Lightbulb,
+                        64,
+                        "text-yellow-500",
+                    ),
+                    frontText: "Why do we use Git?",
+                    backText:
+                        "To track changes, collaborate effectively, revert to previous versions, and manage different versions (branches) of a project.",
+                },
+                {
+                    category: "Basic Concepts",
+                    frontIcon: createSvgIcon(icons.Folder, 64, "text-blue-500"),
+                    frontText: "What is a 'repository' (repo) in Git?",
+                    backText:
+                        "A folder or directory that Git is tracking. It contains all the project files, along with the complete history of changes.",
+                },
+                {
+                    category: "Basic Concepts",
+                    frontIcon: `
+              <div class="flex items-center justify-center space-x-4 flex-icon-container">
+                ${createSvgIcon(icons.HardDrive, 48, "text-green-600")}
+                ${createSvgIcon(icons.Cloud, 48, "text-gray-400")}
+              </div>
+            `,
+                    frontText: "Local vs. Remote Repositories?",
+                    backText:
+                        "**Local:** The copy of the repository on your computer.\n**Remote:** A copy hosted online (e.g., GitHub) that collaborators access.",
+                },
+                // Local Workflow & Commands
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(icons.Folder, 64, "text-blue-500"),
+                    frontText: "`git init`",
+                    backText:
+                        "Initializes a new, empty Git repository in the current directory. (Starts tracking changes).",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: illustrations.workflowStates, // Custom illustration
+                    frontText: "Three 'states' of a file in Git?",
+                    backText:
+                        "1. **Working Directory:** Files you're editing.\n2. **Staging Area (Index):** Changes selected for next commit.\n3. **Git Repository (Committed):** Permanent history stored here.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(icons.Plus, 64, "text-green-500"),
+                    frontText: "What does 'staging' a file mean?",
+                    backText:
+                        "Marking specific changes (or files) that you want to include in your next commit. It's like preparing a package before sending it.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(icons.Plus, 64, "text-green-500"),
+                    frontText: "`git add [file]` or `git add .`",
+                    backText:
+                        "Adds changes from the working directory to the staging area.\n`[file]`: Adds a specific file.\n`.`: Adds all changes in the current directory.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(
+                        icons.GitCommit,
+                        64,
+                        "text-orange-500",
+                    ),
+                    frontText: "What is a 'commit' in Git?",
+                    backText:
+                        "A snapshot of your project's staged changes at a specific point in time. Each commit has a unique ID and a message describing the changes.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(
+                        icons.CheckCircle,
+                        64,
+                        "text-purple-500",
+                    ),
+                    frontText: '`git commit -m "Your message"`',
+                    backText:
+                        "Records the staged changes as a new commit in the repository history, with a descriptive message.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(
+                        icons.ListChecks,
+                        64,
+                        "text-gray-500",
+                    ),
+                    frontText: "`git status`",
+                    backText:
+                        "Shows the status of your working directory and staging area (which files are modified, staged, or untracked).",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(icons.Info, 64, "text-blue-500"),
+                    frontText: "`git log`",
+                    backText:
+                        "Displays the commit history for the current branch, showing commit IDs, authors, dates, and messages.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(
+                        icons.GitCompare,
+                        64,
+                        "text-yellow-500",
+                    ),
+                    frontText: "`git diff`",
+                    backText:
+                        "Shows the differences between your working directory and the staging area, or between the staging area and the last commit, or between two commits/branches.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(icons.Undo2, 64, "text-red-500"),
+                    frontText: "`git restore [file]`",
+                    backText:
+                        "Discards changes in your working directory for a specific file, reverting it to its last committed or staged state.",
+                },
+                {
+                    category: "Local Workflow & Commands",
+                    frontIcon: createSvgIcon(
+                        icons.RefreshCw,
+                        64,
+                        "text-orange-500",
+                    ),
+                    frontText: "`git reset [file]` or `git reset --hard`",
+                    backText:
+                        "Unstages changes (`git reset [file]`) or reverts the repository to a previous commit, discarding all subsequent changes (`git reset --hard [commit-id]`). Use with caution!",
+                },
+                // Branching & Merging
+                {
+                    category: "Branching & Merging",
+                    frontIcon: illustrations.branching, // Custom illustration
+                    frontText: "What is a 'branch'?",
+                    backText:
+                        "An independent line of development. It allows you to work on new features or bug fixes without affecting the main project.",
+                },
+                {
+                    category: "Branching & Merging",
+                    frontIcon: createSvgIcon(
+                        icons.GitBranch,
+                        64,
+                        "text-teal-500",
+                    ),
+                    frontText: "`git branch`",
+                    backText:
+                        "Lists all local branches. `git branch [new-branch-name]` creates a new branch.",
+                },
+                {
+                    category: "Branching & Merging",
+                    frontIcon: createSvgIcon(
+                        icons.ArrowRightLeft,
+                        64,
+                        "text-orange-500",
+                    ),
+                    frontText:
+                        "`git checkout [branch-name]` or `git switch [branch-name]`",
+                    backText:
+                        "Switches to a different branch. (`git switch` is newer and often preferred for clarity).",
+                },
+                {
+                    category: "Branching & Merging",
+                    frontIcon: illustrations.merging, // Custom illustration
+                    frontText: "What is 'merging'?",
+                    backText:
+                        "Combining changes from one branch into another branch.",
+                },
+                {
+                    category: "Branching & Merging",
+                    frontIcon: createSvgIcon(
+                        icons.GitMerge,
+                        64,
+                        "text-indigo-500",
+                    ),
+                    frontText: "`git merge [branch-name]`",
+                    backText:
+                        "Merges the specified branch into your current branch.",
+                },
+                {
+                    category: "Branching & Merging",
+                    frontIcon: illustrations.mergeConflict, // Custom illustration
+                    frontText: "What is a 'merge conflict'?",
+                    backText:
+                        "When Git cannot automatically combine changes from two branches because the same lines of code (or files) were modified differently. You have to resolve it manually.",
+                },
+                // Advanced Local Concepts
+                {
+                    category: "Advanced Local Concepts",
+                    frontIcon: `<span class="text-6xl">🎯</span>`, // Target emoji
+                    frontText: "What is the `HEAD` in Git?",
+                    backText:
+                        "A pointer that indicates the tip of the current branch, or the currently checked-out commit. It's essentially 'where you are' in your repository.",
+                },
+                {
+                    category: "Advanced Local Concepts",
+                    frontIcon: illustrations.detachedHead, // Custom illustration
+                    frontText: "What is 'Detached HEAD'?",
+                    backText:
+                        "When your `HEAD` pointer is pointing directly to a commit, not to a branch. This means new commits you make won't be on any branch, and you might 'lose' them if you switch branches without creating a new one.",
+                },
+                {
+                    category: "Advanced Local Concepts",
+                    frontIcon: illustrations.gitRebase, // Custom illustration
+                    frontText: "`git rebase [branch]`",
+                    backText:
+                        "Rewrites commit history by moving or combining a sequence of commits to a new base commit. Can make history cleaner but should be used carefully, especially on shared branches.",
+                },
+                {
+                    category: "Advanced Local Concepts",
+                    frontIcon: illustrations.gitStash, // Custom illustration
+                    frontText: "`git stash`",
+                    backText:
+                        "Temporarily saves changes in your working directory and staging area without committing them, allowing you to switch branches or work on something else. You can apply them later.",
+                },
+                // Remote Operations & Collaboration
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: `
+              <div class="flex items-center flex-icon-container">
+                ${createSvgIcon(icons.HardDrive, 48, "text-green-600")}
+                ${createSvgIcon(icons.Code, 32, "text-purple-500 mx-2 arrow-icon")}
+                ${createSvgIcon(icons.Cloud, 48, "text-gray-400")}
+              </div>
+            `,
+                    frontText: "`git remote add origin [url]`",
+                    backText:
+                        "Connects your local repository to a remote repository on a hosting service (like GitHub), giving it the alias 'origin'.",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: createSvgIcon(
+                        icons.Network,
+                        64,
+                        "text-gray-500",
+                    ),
+                    frontText: "`git remote -v`",
+                    backText:
+                        "Shows the URLs of the remote repositories that your local repository is connected to.",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: illustrations.gitFetch, // Custom illustration
+                    frontText: "`git fetch`",
+                    backText:
+                        "Downloads commits, files, and refs from a remote repository into your local repository. It *doesn't* automatically merge them (unlike `git pull`).",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: illustrations.gitPull, // Custom illustration
+                    frontText: "`git pull`",
+                    backText:
+                        "Fetches changes from the remote repository and automatically merges them into your current local branch. (Combination of `git fetch` and `git merge`).",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: illustrations.gitPush, // Custom illustration
+                    frontText: "`git push`",
+                    backText:
+                        "Uploads your local commits to the remote repository.",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: createSvgIcon(
+                        icons.GitFork,
+                        64,
+                        "text-purple-500",
+                    ),
+                    frontText: "What is `forking` on GitHub/GitLab?",
+                    backText:
+                        "Creating your own copy of someone else's repository on the remote server. You can make changes to your fork without affecting the original project.",
+                },
+                {
+                    category: "Remote Operations & Collaboration",
+                    frontIcon: createSvgIcon(
+                        icons.GitPullRequest,
+                        64,
+                        "text-blue-500",
+                    ),
+                    frontText:
+                        "What is a `pull request` (PR) / `merge request` (MR)?",
+                    backText:
+                        "A request to merge changes from one branch (often your feature branch) into another branch (often `main`/`master`) in a remote repository. It's used for code review and collaboration.",
+                },
+                // General/Common
+                {
+                    category: "General/Common",
+                    frontIcon: `<span class="text-6xl">🛣️</span>`, // Road emoji
+                    frontText: "What is the `master` or `main` branch?",
+                    backText:
+                        "The primary or default branch in a Git repository, typically used for the stable version of the project. (Often named `main` now instead of `master`).",
+                },
+            ];
+
+            let currentCardIndex = 0;
+            let isFlipped = false;
+            const displayFlashcardsData = flashcardsData;
+
+            const flashcardWrapper =
+                document.getElementById("flashcard-wrapper");
+            const flashcardElement = document.getElementById("flashcard");
+            const flashcardInner =
+                flashcardElement.querySelector(".flashcard-inner");
+            const frontIconElement = document.getElementById("front-icon");
+            const frontTextElement = document.getElementById("front-text");
+            const categoryTextElement =
+                document.getElementById("category-text");
+            const backTextElement = document.getElementById("back-text");
+            const prevBtn = document.getElementById("prev-btn");
+            const nextBtn = document.getElementById("next-btn");
+            const cardCounterElement = document.getElementById("card-counter");
+
+            function renderCard() {
+                // Apply fade-out effect
+                flashcardWrapper.classList.add("card-transition-fade-out");
+
+                setTimeout(() => {
+                    const card = displayFlashcardsData[currentCardIndex];
+                    frontIconElement.innerHTML = card.frontIcon;
+                    frontTextElement.textContent = card.frontText;
+                    categoryTextElement.textContent = card.category;
+                    backTextElement.innerHTML = card.backText.replace(
+                        /\*\*(.*?)\*\*/g,
+                        "<strong>$1</strong>",
+                    );
+
+                    cardCounterElement.textContent = `Card ${currentCardIndex + 1} of ${displayFlashcardsData.length}`;
+
+                    if (isFlipped) {
+                        flashcardInner.classList.remove("flashcard-flipped");
+                        isFlipped = false;
+                    }
+
+                    // Remove fade-out and apply fade-in
+                    flashcardWrapper.classList.remove(
+                        "card-transition-fade-out",
+                    );
+                    flashcardWrapper.classList.add("card-transition-fade-in");
+                }, 300);
+                setTimeout(() => {
+                    flashcardWrapper.classList.remove(
+                        "card-transition-fade-in",
+                    );
+                }, 600);
+            }
+
+            function flipCard() {
+                flashcardInner.classList.toggle("flashcard-flipped");
+                isFlipped = !isFlipped;
+            }
+
+            function handleNext() {
+                if (isFlipped) {
+                    flashcardInner.classList.remove("flashcard-flipped");
+                    isFlipped = false;
+                    setTimeout(() => {
+                        currentCardIndex =
+                            (currentCardIndex + 1) %
+                            displayFlashcardsData.length;
+                        renderCard();
+                    }, 300);
+                } else {
+                    currentCardIndex =
+                        (currentCardIndex + 1) % displayFlashcardsData.length;
+                    renderCard();
+                }
+            }
+
+            function handlePrevious() {
+                if (isFlipped) {
+                    flashcardInner.classList.remove("flashcard-flipped");
+                    isFlipped = false;
+                    setTimeout(() => {
+                        currentCardIndex =
+                            (currentCardIndex -
+                                1 +
+                                displayFlashcardsData.length) %
+                            displayFlashcardsData.length;
+                        renderCard();
+                    }, 300);
+                } else {
+                    currentCardIndex =
+                        (currentCardIndex - 1 + displayFlashcardsData.length) %
+                        displayFlashcardsData.length;
+                    renderCard();
+                }
+            }
+
+            // Event Listeners
+            flashcardElement.addEventListener("click", flipCard);
+            nextBtn.addEventListener("click", handleNext);
+            prevBtn.addEventListener("click", handlePrevious);
+
+            // Keyboard navigation
+            document.addEventListener("keydown", (event) => {
+                if (event.code === "Space") {
+                    event.preventDefault();
+                    flipCard();
+                } else if (event.code === "ArrowRight") {
+                    handleNext();
+                } else if (event.code === "ArrowLeft") {
+                    handlePrevious();
+                }
+            });
+
+            // Initial render
+            document.addEventListener("DOMContentLoaded", renderCard);
+        </script>
+    </body>
+</html>
